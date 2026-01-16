@@ -33,6 +33,7 @@
             height: 100vh;
         }
 
+        /* [수정됨] 안내 문구 컨테이너 */
         #guide-text {
             position: fixed;
             bottom: 30px;
@@ -43,9 +44,32 @@
             text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
             z-index: 100;
             pointer-events: none; 
+            
+            /* Flexbox 가로 정렬 */
+            display: flex;
+            /* [핵심 수정] 아래쪽 기준 정렬로 변경 */
+            align-items: flex-end; 
         }
 
-        /* 초기화 버튼 스타일 (투명도 적용) */
+        /* QR코드 이미지 스타일 */
+        #guide-qr {
+            width: 84px;
+            height: 84px;
+            background-color: white;
+            padding: 6px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-right: 15px; 
+            margin-bottom: 0;
+        }
+
+        /* [수정됨] 텍스트 위치 조정 */
+        .guide-msg {
+            /* 기존 상단 여백 제거 (하단 정렬이므로 필요 없음) */
+            /* margin-top: 10px; */ 
+        }
+
+        /* 초기화 버튼 스타일 */
         #reset-btn {
             position: fixed;
             bottom: 30px;
@@ -60,7 +84,7 @@
             cursor: pointer;
             z-index: 200;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            opacity: 0.3; /* 평소 투명도 30% */
+            opacity: 0.3; 
             transition: opacity 0.3s, background 0.3s;
         }
         #reset-btn:hover {
@@ -144,7 +168,10 @@
         브라우저가 동영상을 지원하지 않습니다.
     </video>
 
-    <div id="guide-text">메시지는 60자 이내로 입력해 주세요</div>
+    <div id="guide-text">
+        <img src="https://github.com/mtinet/tree/raw/main/qr.png?raw=true" alt="QR코드" id="guide-qr">
+        <div class="guide-msg">메시지는 60자 이내로 입력해 주세요</div>
+    </div>
     
     <button id="reset-btn">전체 초기화 🔄</button>
 
@@ -221,7 +248,7 @@
         const container = document.getElementById('message-container');
         let zIndex = 1;
 
-        // [수정됨] 초기화 버튼 로직
+        // 초기화 버튼 로직
         const resetBtn = document.getElementById('reset-btn');
         resetBtn.addEventListener('click', () => {
             if (confirm("모든 메시지를 삭제하고 초기 상태로 되돌리겠습니까?\n(기본 메시지는 다시 나타납니다)")) {
@@ -232,11 +259,11 @@
                     container.innerHTML = '';
                     currentOnScreenIds.clear();
                     
-                    // 2. 데이터 리셋 (기본 메시지로 채우기)
+                    // 2. 데이터 리셋
                     allMessages = [...defaultMessages];
                     priorityQueue = [];
 
-                    // 3. 즉시 몇 개 띄워주기 (빈 화면 방지)
+                    // 3. 즉시 몇 개 띄워주기
                     for(let i=0; i<3; i++) {
                         setTimeout(displayMessage, i * 600);
                     }
