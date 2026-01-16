@@ -33,22 +33,18 @@
             height: 100vh;
         }
 
-        /* [수정됨] 안내 문구 컨테이너 */
+        /* 안내 문구 컨테이너 */
         #guide-text {
             position: fixed;
             bottom: 30px;
             left: 30px;
             font-family: 'Jua', sans-serif;
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.9);
-            text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
             z-index: 100;
             pointer-events: none; 
             
             /* Flexbox 가로 정렬 */
             display: flex;
-            /* [핵심 수정] 아래쪽 기준 정렬로 변경 */
-            align-items: flex-end; 
+            align-items: flex-end; /* 아래쪽 라인 맞춤 */
         }
 
         /* QR코드 이미지 스타일 */
@@ -63,10 +59,28 @@
             margin-bottom: 0;
         }
 
-        /* [수정됨] 텍스트 위치 조정 */
-        .guide-msg {
-            /* 기존 상단 여백 제거 (하단 정렬이므로 필요 없음) */
-            /* margin-top: 10px; */ 
+        /* [추가됨] 텍스트 그룹 (세로 정렬용) */
+        .guide-text-group {
+            display: flex;
+            flex-direction: column; /* 세로로 쌓기 */
+            justify-content: flex-end;
+            margin-bottom: 3px; /* QR코드 하단과 시각적 높이 맞춤 */
+        }
+
+        /* [수정됨] 메인 안내 문구 */
+        .msg-main {
+            font-size: 1.3rem; /* 크기 키움 */
+            color: #FFEB3B; /* 완전 흰색 */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9); /* 진한 그림자 */
+            margin-bottom: 5px; /* 아래 줄과 간격 */
+        }
+
+        /* [추가됨] 기술지원 문구 */
+        .msg-sub {
+            font-size: 0.95rem; /* 약간 작게 */
+            color: #FFFFFF; /* 노란색으로 포인트 (가독성 좋음) */
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9); /* 진한 그림자 */
+            font-weight: normal;
         }
 
         /* 초기화 버튼 스타일 */
@@ -170,7 +184,10 @@
 
     <div id="guide-text">
         <img src="https://github.com/mtinet/tree/raw/main/qr.png?raw=true" alt="QR코드" id="guide-qr">
-        <div class="guide-msg">메시지는 60자 이내로 입력해 주세요</div>
+        <div class="guide-text-group">
+            <div class="msg-main">메시지는 60자 이내로 입력해 주세요</div>
+            <div class="msg-sub">기술지원: 진로직업교육과 취업지원팀</div>
+        </div>
     </div>
     
     <button id="reset-btn">전체 초기화 🔄</button>
