@@ -2,10 +2,14 @@
 ## 단축 주소  
 ## Tree 웹페이지 단축주소  
 [https://url.kr/sk86pe](https://url.kr/sk86pe)  
+
 ---
+
 ## Sender 웹페이지 QR코드  
 ![](https://github.com/mtinet/tree/blob/main/qr.png?raw=true)  
+
 ---
+
 ### "당신의 소망, 나무에 걸어보세요."  
 QR코드를 스캔하여 마음을 전송해 보세요. 여러분이 적은 소중한 메시지가 실시간으로 탐스러운 열매가 되어 나무에 맺힙니다. 사연이 길수록 더 크고 풍성한 열매가 열리는 마법 같은 숲속에서, 우리만의 이야기를 만들어보세요.  
 
