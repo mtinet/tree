@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소망의 나무 - 라이브 열매 월</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #607D8B;
+        }
+
+        #bg-video {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            object-fit: cover;
+            filter: brightness(0.9);
+        }
+
+        #message-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* [추가됨] 좌측 하단 안내 문구 스타일 */
+        #guide-text {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            font-family: 'Jua', sans-serif;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+            z-index: 100;
+            pointer-events: none; /* 클릭 방해 안 하도록 */
+        }
+
+        .fruit-card {
+            position: absolute;
+            border-radius: 50%;
+            color: #4a3b2a;
+            text-align: center;
+            box-shadow: 2px 5px 15px rgba(0,0,0,0.25);
+            font-family: 'Gaegu', cursive;
+            
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            
+            box-sizing: border-box;
+            background-color: rgba(255,255,255,0.95);
+            
+            transform-origin: top center; 
+            opacity: 0;
+            transform: scale(0);
+            transition: opacity 0.5s ease;
+            word-wrap: break-word;
+        }
+
+        .fruit-card::before {
+            content: '';
+            position: absolute;
+            top: -10px; left: 50%;
+            transform: translateX(-50%);
+            width: 6px; height: 14px;
+            background-color: #5D4037;
+            border-radius: 3px;
+        }
+
+        .fruit-card::after {
+            content: '';
+            position: absolute;
+            top: -14px; left: 50%;
+            width: 20px; height: 10px;
+            background-color: #66BB6A;
+            border-radius: 10px 0px 10px 0px;
+            transform: rotate(-15deg);
+        }
+
+        .nickname { 
+            margin-top: -10px; 
+            margin-bottom: 2px;
+            flex-shrink: 0; 
+            opacity: 0.6; 
+            font-family: 'Jua', sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 90%;
+        }
+        
+        .content { 
+            font-weight: bold; 
+            word-break: keep-all; 
+            line-height: 1.25;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 6; 
+        }
+
+        @keyframes swing {
+            0% { transform: rotate(3deg); }
+            100% { transform: rotate(-3deg); }
+        }
+
+        .hanging {
+            animation: swing 2.5s ease-in-out infinite alternate;
+        }
+
+        .show { opacity: 1; transform: scale(1); }
+    </style>
+</head>
+<body>
+
+    <video id="bg-video" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=2000&auto=format&fit=crop">
+        <source src="https://videos.pexels.com/video-files/4958636/4958636-hd_1920_1080_30fps.mp4" type="video/mp4">
+        브라우저가 동영상을 지원하지 않습니다.
+    </video>
+
+    <div id="guide-text">메시지는 60자 이내로 입력해 주세요</div>
+
+    <div id="message-container"></div>
+
+    <script>
+        let allMessages = [
+            { id: 1, nickname: "짧음", text: "안녕?" },
+            { id: 2, nickname: "보통", text: "올해는 건강하세요" },
+            { id: 3, nickname: "약간김", text: "주렁주렁 행복이 열리는 나무가 되길" },
+            { id: 4, nickname: "중간", text: "이 정도 길이면 중간 사이즈 열매가 열릴까요? 테스트 중입니다." },
+            { id: 5, nickname: "긺", text: "글자가 많아지면 열매가 커져야 글씨가 튀어나가지 않아요. 더 크게 만들어볼게요." },
+            { id: 6, nickname: "최대길이", text: "엄청나게 긴 사연을 적는 분들도 계시겠죠? 그런 분들을 위해 준비했습니다. 초대형 자이언트 열매!" },
+            { id: 7, nickname: "바람", text: "걱정은 훌훌" },
+            { id: 8, nickname: "뿌리", text: "단단한 마음" },
+            { id: 9, nickname: "새싹", text: "파릇파릇 돋아나라" }
+        ];
+
+        let priorityQueue = [];
+        let currentOnScreenIds = new Set();
+        const fruitColors = ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#F1C0E8', '#A0E7E5'];
+        const container = document.getElementById('message-container');
+        let zIndex = 1;
+
+        function isOverlapping(newRect) {
+            const cards = document.querySelectorAll('.fruit-card.show');
+            for (let card of cards) {
+                const rect = card.getBoundingClientRect();
+                if (!(newRect.right < rect.left || 
+                      newRect.left > rect.right || 
+                      newRect.bottom < rect.top || 
+                      newRect.top > rect.bottom)) {
+                    return true; 
+                }
+            }
+            return false;
+        }
+
+        function displayMessage() {
+            let messageData;
+
+            if (priorityQueue.length > 0) {
+                messageData = priorityQueue.shift();
+            } else {
+                const available = allMessages.filter(m => !currentOnScreenIds.has(m.id));
+                if (available.length === 0) return;
+                messageData = available[Math.floor(Math.random() * available.length)];
+            }
+
+            const card = document.createElement('div');
+            card.className = `fruit-card`;
+            card.style.backgroundColor = fruitColors[Math.floor(Math.random() * fruitColors.length)];
+            
+            const textLen = messageData.text.length;
+            
+            // [설정] 60자 기준으로 5단계 사이즈 조정
+            let settings = {
+                size: 95,
+                padding: '12px',    
+                nickSize: '0.7rem',
+                contentSize: '0.9rem'
+            };
+
+            // 45자 이상이면 왕특대 (약 60자까지 커버)
+            if (textLen > 45) {
+                settings = { size: 200, padding: '25px', nickSize: '1rem', contentSize: '1.1rem' };
+            } else if (textLen > 30) {
+                settings = { size: 170, padding: '20px', nickSize: '0.9rem', contentSize: '1.05rem' };
+            } else if (textLen > 20) {
+                settings = { size: 145, padding: '18px', nickSize: '0.85rem', contentSize: '1rem' };
+            } else if (textLen > 10) {
+                settings = { size: 120, padding: '15px', nickSize: '0.8rem', contentSize: '0.95rem' };
+            }
+            
+            card.style.width = `${settings.size}px`;
+            card.style.height = `${settings.size}px`;
+            card.style.padding = settings.padding;
+
+            // 좌표 계산
+            let top, left, attempts = 0;
+            do {
+                const zoneSelector = Math.random();
+                
+                if (zoneSelector < 0.35) {
+                    // Zone 1: 왼쪽 ~ 중간
+                    left = Math.random() * (window.innerWidth * 0.40) + (window.innerWidth * 0.05);
+                    top = Math.random() * (window.innerHeight * 0.4) + (window.innerHeight * 0.2);
+                } 
+                else if (zoneSelector < 0.75) {
+                    // Zone 2: 중앙 상단 (맨 위까지 확장)
+                    left = Math.random() * (window.innerWidth * 0.35) + (window.innerWidth * 0.3);
+                    top = Math.random() * (window.innerHeight * 0.48) + (window.innerHeight * 0.02);
+                } 
+                else {
+                    // Zone 3: 우측 하단
+                    left = Math.random() * (window.innerWidth * 0.25) + (window.innerWidth * 0.6);
+                    top = Math.random() * (window.innerHeight * 0.35) + (window.innerHeight * 0.4);
+                }
+                
+                attempts++;
+            } while (isOverlapping({left, top, right: left + settings.size, bottom: top + settings.size}) && attempts < 50);
+
+            if (attempts >= 50) return;
+
+            card.style.top = `${top}px`;
+            card.style.left = `${left}px`;
+            card.style.zIndex = zIndex++;
+            card.style.animationDelay = `-${Math.random() * 2}s`;
+
+            card.innerHTML = `
+                <div class="nickname" style="font-size: ${settings.nickSize};">${messageData.nickname}</div>
+                <div class="content" style="font-size: ${settings.contentSize};">${messageData.text}</div>
+            `;
+
+            container.appendChild(card);
+            currentOnScreenIds.add(messageData.id);
+
+            setTimeout(() => {
+                card.classList.add('show');
+                card.classList.add('hanging');
+            }, 50);
+
+            const baseDuration = 10000;
+            const extraTime = textLen * 100;
+            const duration = Math.random() * 3000 + baseDuration + extraTime;
+
+            setTimeout(() => {
+                card.classList.remove('show');
+                setTimeout(() => {
+                    if (container.contains(card)) {
+                        container.removeChild(card);
+                        currentOnScreenIds.delete(messageData.id);
+                    }
+                }, 1000);
+            }, duration);
+        }
+
+        for(let i=0; i<6; i++) {
+            setTimeout(displayMessage, i * 500);
+        }
+        setInterval(displayMessage, 2000);
+
+        function addNewMessage(nickname, text) {
+            const newMsg = { id: Date.now(), nickname, text };
+            allMessages.push(newMsg);
+            priorityQueue.push(newMsg);
+        }
+    </script>
+</body>
+</html>

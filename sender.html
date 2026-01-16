@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소망 메시지 보내기</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+        
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .container {
+            width: 90%;
+            max-width: 400px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h2 { color: #5D4037; margin-bottom: 20px; }
+        
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 8px; color: #666; }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-family: 'Jua', sans-serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus { border-color: #66BB6A; }
+        
+        textarea { height: 100px; resize: none; }
+        
+        .char-count { text-align: right; font-size: 0.8rem; color: #888; margin-top: 5px; }
+        .warning { color: red; }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #66BB6A;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-family: 'Jua', sans-serif;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+        }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🌳 소망의 나무 메시지</h2>
+        
+        <div class="input-group">
+            <label>닉네임</label>
+            <input type="text" id="nickname" placeholder="이름이나 별명" maxlength="10">
+        </div>
+
+        <div class="input-group">
+            <label>소망 메시지</label>
+            <textarea id="message" placeholder="소원을 적어주세요 (최대 60자)" maxlength="60"></textarea>
+            <div class="char-count"><span id="curr-len">0</span> / 60</div>
+        </div>
+
+        <button id="send-btn">보내기 💌</button>
+    </div>
+
+    <script type="module">
+        // ★★★ 여기에 Firebase 설정값을 복사해 넣으세요 ★★★
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, push, serverTimestamp } 
+        from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAnansDDKLmGrWO3UtpfxEavdJ_ULiZqBU",
+  authDomain: "tree-a841c.firebaseapp.com",
+  databaseURL: "https://tree-a841c-default-rtdb.firebaseio.com",
+  projectId: "tree-a841c",
+  storageBucket: "tree-a841c.firebasestorage.app",
+  messagingSenderId: "847725327099",
+  appId: "1:847725327099:web:bf3b4529b8fae3c641b65e",
+  measurementId: "G-N8GMR87FSW"
+};
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const nicknameInput = document.getElementById('nickname');
+        const messageInput = document.getElementById('message');
+        const sendBtn = document.getElementById('send-btn');
+        const currLen = document.getElementById('curr-len');
+
+        // 글자 수 세기
+        messageInput.addEventListener('input', () => {
+            const len = messageInput.value.length;
+            currLen.textContent = len;
+            if(len >= 60) currLen.classList.add('warning');
+            else currLen.classList.remove('warning');
+        });
+
+        // 전송 버튼 클릭
+        sendBtn.addEventListener('click', () => {
+            const nickname = nicknameInput.value.trim();
+            const text = messageInput.value.trim();
+
+            if (!text) {
+                alert("메시지를 입력해주세요!");
+                return;
+            }
+
+            const finalNickname = nickname || "익명"; // 닉네임 없으면 익명
+
+            // 데이터베이스에 저장
+            push(ref(db, 'messages'), {
+                nickname: finalNickname,
+                text: text,
+                timestamp: serverTimestamp() // 서버 시간 저장
+            }).then(() => {
+                alert("소망이 나무에 전달되었습니다! 🌳");
+                messageInput.value = "";
+                nicknameInput.value = "";
+                currLen.textContent = "0";
+            }).catch((error) => {
+                console.error("Error:", error);
+                alert("전송 실패.. 다시 시도해주세요.");
+            });
+        });
+    </script>
+</body>
+</html>

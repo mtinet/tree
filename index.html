@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소망의 나무 - 라이브 열매 월</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #607D8B;
+        }
+
+        #bg-video {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            object-fit: cover;
+            filter: brightness(0.9);
+        }
+
+        #message-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #guide-text {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            font-family: 'Jua', sans-serif;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+            z-index: 100;
+            pointer-events: none; 
+        }
+
+        /* 초기화 버튼 스타일 (투명도 적용) */
+        #reset-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Jua', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            z-index: 200;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            opacity: 0.3; /* 평소 투명도 30% */
+            transition: opacity 0.3s, background 0.3s;
+        }
+        #reset-btn:hover {
+            opacity: 1;
+            background-color: #1976D2;
+        }
+
+        .fruit-card {
+            position: absolute;
+            border-radius: 50%;
+            color: #4a3b2a;
+            text-align: center;
+            box-shadow: 2px 5px 15px rgba(0,0,0,0.25);
+            font-family: 'Gaegu', cursive;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            background-color: rgba(255,255,255,0.95);
+            transform-origin: top center; 
+            opacity: 0;
+            transform: scale(0);
+            transition: opacity 0.5s ease;
+        }
+
+        .fruit-card::before {
+            content: '';
+            position: absolute;
+            top: -10px; left: 50%;
+            transform: translateX(-50%);
+            width: 6px; height: 14px;
+            background-color: #5D4037;
+            border-radius: 3px;
+        }
+
+        .fruit-card::after {
+            content: '';
+            position: absolute;
+            top: -14px; left: 50%;
+            width: 20px; height: 10px;
+            background-color: #66BB6A;
+            border-radius: 10px 0px 10px 0px;
+            transform: rotate(-15deg);
+        }
+
+        .nickname { 
+            margin-top: -10px; 
+            margin-bottom: 2px;
+            flex-shrink: 0; 
+            opacity: 0.6; 
+            font-family: 'Jua', sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 90%;
+        }
+        
+        .content { 
+            font-weight: bold; 
+            word-break: break-all;
+            line-height: 1.25;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 6; 
+        }
+
+        @keyframes swing {
+            0% { transform: rotate(3deg); }
+            100% { transform: rotate(-3deg); }
+        }
+        .hanging { animation: swing 2.5s ease-in-out infinite alternate; }
+        .show { opacity: 1; transform: scale(1); }
+    </style>
+</head>
+<body>
+
+    <video id="bg-video" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=2000&auto=format&fit=crop">
+        <source src="https://videos.pexels.com/video-files/4958636/4958636-hd_1920_1080_30fps.mp4" type="video/mp4">
+        브라우저가 동영상을 지원하지 않습니다.
+    </video>
+
+    <div id="guide-text">메시지는 60자 이내로 입력해 주세요</div>
+    
+    <button id="reset-btn">전체 초기화 🔄</button>
+
+    <div id="message-container"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, onChildAdded, get, remove } 
+        from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        // ==========================================
+        // [1] 기본 세팅 메시지
+        // ==========================================
+        const defaultMessages = [
+            { id: 'def1', nickname: '숲지기', text: '소망의 나무에 오신 것을 환영합니다!' },
+            { id: 'def2', nickname: '안내', text: 'QR코드를 찍어 소원을 남겨보세요.' },
+            { id: 'def3', nickname: '행운', text: '여러분의 꿈이 모두 이루어지길 바랍니다.' },
+            { id: 'def4', nickname: '나무', text: '행복한 하루 보내세요!' }
+        ];
+
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnansDDKLmGrWO3UtpfxEavdJ_ULiZqBU",
+            authDomain: "tree-a841c.firebaseapp.com",
+            databaseURL: "https://tree-a841c-default-rtdb.firebaseio.com",
+            projectId: "tree-a841c",
+            storageBucket: "tree-a841c.firebasestorage.app",
+            messagingSenderId: "847725327099",
+            appId: "1:847725327099:web:bf3b4529b8fae3c641b65e",
+            measurementId: "G-N8GMR87FSW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
+
+        // 전체 메시지 목록 초기화
+        let allMessages = [...defaultMessages]; 
+        
+        let priorityQueue = [];
+        let currentOnScreenIds = new Set();
+        let isInitialLoadDone = false;
+
+        // 2. 기존 데이터 가져오기
+        get(messagesRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    allMessages.push({ id: childSnapshot.key, nickname: data.nickname, text: data.text });
+                });
+                console.log("기존 데이터 로드 완료. 총 개수:", allMessages.length);
+            }
+            isInitialLoadDone = true;
+        }).catch((error) => {
+            console.error("데이터 로드 실패:", error);
+            isInitialLoadDone = true; 
+        });
+
+        // 3. 실시간 리스너
+        onChildAdded(messagesRef, (snapshot) => {
+            if (!isInitialLoadDone) return; 
+
+            const data = snapshot.val();
+            const newMsg = { id: snapshot.key, nickname: data.nickname, text: data.text };
+            
+            console.log("새 메시지 도착!", newMsg);
+            
+            allMessages.push(newMsg); 
+            priorityQueue.push(newMsg); 
+        });
+
+        // ---------------- [UI 표시 로직] ----------------
+        const fruitColors = ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#F1C0E8', '#A0E7E5'];
+        const container = document.getElementById('message-container');
+        let zIndex = 1;
+
+        // [수정됨] 초기화 버튼 로직
+        const resetBtn = document.getElementById('reset-btn');
+        resetBtn.addEventListener('click', () => {
+            if (confirm("모든 메시지를 삭제하고 초기 상태로 되돌리겠습니까?\n(기본 메시지는 다시 나타납니다)")) {
+                remove(messagesRef).then(() => {
+                    alert("초기화되었습니다.");
+                    
+                    // 1. 화면 비우기
+                    container.innerHTML = '';
+                    currentOnScreenIds.clear();
+                    
+                    // 2. 데이터 리셋 (기본 메시지로 채우기)
+                    allMessages = [...defaultMessages];
+                    priorityQueue = [];
+
+                    // 3. 즉시 몇 개 띄워주기 (빈 화면 방지)
+                    for(let i=0; i<3; i++) {
+                        setTimeout(displayMessage, i * 600);
+                    }
+                    
+                }).catch((error) => {
+                    console.error("삭제 실패:", error);
+                    alert("초기화에 실패했습니다.");
+                });
+            }
+        });
+
+        function isOverlapping(newRect) {
+            const cards = document.querySelectorAll('.fruit-card.show');
+            for (let card of cards) {
+                const rect = card.getBoundingClientRect();
+                if (!(newRect.right < rect.left || 
+                      newRect.left > rect.right || 
+                      newRect.bottom < rect.top || 
+                      newRect.top > rect.bottom)) {
+                    return true; 
+                }
+            }
+            return false;
+        }
+
+        function displayMessage() {
+            let messageData;
+
+            // 1순위: 실시간 큐
+            if (priorityQueue.length > 0) {
+                messageData = priorityQueue.shift();
+            } 
+            // 2순위: 전체 메시지 (화면에 없는 것)
+            else {
+                if (allMessages.length === 0) return; 
+                
+                const available = allMessages.filter(m => !currentOnScreenIds.has(m.id));
+                
+                // 화면에 꽉 찼으면 대기
+                if (available.length === 0) {
+                    return; 
+                }
+
+                messageData = available[Math.floor(Math.random() * available.length)];
+            }
+
+            const card = document.createElement('div');
+            card.className = `fruit-card`;
+            card.style.backgroundColor = fruitColors[Math.floor(Math.random() * fruitColors.length)];
+            
+            const textLen = messageData.text.length;
+            
+            let settings = {
+                size: 95, padding: '12px', nickSize: '0.7rem', contentSize: '0.9rem'
+            };
+
+            if (textLen > 45) {
+                settings = { size: 200, padding: '25px', nickSize: '1rem', contentSize: '1.1rem' };
+            } else if (textLen > 30) {
+                settings = { size: 170, padding: '20px', nickSize: '0.9rem', contentSize: '1.05rem' };
+            } else if (textLen > 20) {
+                settings = { size: 145, padding: '18px', nickSize: '0.85rem', contentSize: '1rem' };
+            } else if (textLen > 10) {
+                settings = { size: 120, padding: '15px', nickSize: '0.8rem', contentSize: '0.95rem' };
+            }
+            
+            card.style.width = `${settings.size}px`;
+            card.style.height = `${settings.size}px`;
+            card.style.padding = settings.padding;
+
+            // 좌표 계산
+            let top, left, attempts = 0;
+            do {
+                const zoneSelector = Math.random();
+                if (zoneSelector < 0.35) {
+                    left = Math.random() * (window.innerWidth * 0.40) + (window.innerWidth * 0.05);
+                    top = Math.random() * (window.innerHeight * 0.4) + (window.innerHeight * 0.2);
+                } else if (zoneSelector < 0.75) {
+                    left = Math.random() * (window.innerWidth * 0.35) + (window.innerWidth * 0.3);
+                    top = Math.random() * (window.innerHeight * 0.48) + (window.innerHeight * 0.02);
+                } else {
+                    left = Math.random() * (window.innerWidth * 0.25) + (window.innerWidth * 0.6);
+                    top = Math.random() * (window.innerHeight * 0.35) + (window.innerHeight * 0.4);
+                }
+                attempts++;
+            } while (isOverlapping({left, top, right: left + settings.size, bottom: top + settings.size}) && attempts < 50);
+
+            if (attempts >= 50) return;
+
+            card.style.top = `${top}px`;
+            card.style.left = `${left}px`;
+            card.style.zIndex = zIndex++;
+            card.style.animationDelay = `-${Math.random() * 2}s`;
+
+            card.innerHTML = `
+                <div class="nickname" style="font-size: ${settings.nickSize};">${messageData.nickname}</div>
+                <div class="content" style="font-size: ${settings.contentSize};">${messageData.text}</div>
+            `;
+
+            container.appendChild(card);
+            currentOnScreenIds.add(messageData.id);
+
+            setTimeout(() => {
+                card.classList.add('show');
+                card.classList.add('hanging');
+            }, 50);
+
+            const baseDuration = 10000;
+            const extraTime = textLen * 100;
+            const duration = Math.random() * 3000 + baseDuration + extraTime;
+
+            setTimeout(() => {
+                card.classList.remove('show');
+                setTimeout(() => {
+                    if (container.contains(card)) {
+                        container.removeChild(card);
+                        currentOnScreenIds.delete(messageData.id);
+                    }
+                }, 1000);
+            }, duration);
+        }
+
+        // 실행
+        setTimeout(() => {
+            // 초기 3개 정도 빠르게 띄우기
+            for(let i=0; i<3; i++) {
+                setTimeout(displayMessage, i * 600);
+            }
+            setInterval(displayMessage, 2000);
+        }, 1500);
+
+    </script>
+</body>
+</html>

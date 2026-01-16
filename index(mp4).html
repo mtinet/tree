@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소망의 나무 - 라이브 열매 월</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #607D8B;
+        }
+
+        /* 배경 동영상 스타일 */
+        #bg-video {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            object-fit: cover; /* 화면 꽉 채우기 */
+            filter: brightness(0.9); /* 영상 밝기 조절 (필요시 조절) */
+        }
+
+        #message-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 열매 스타일 */
+        .fruit-card {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            color: #4a3b2a;
+            text-align: center;
+            box-shadow: 2px 5px 15px rgba(0,0,0,0.2);
+            font-family: 'Gaegu', cursive;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            box-sizing: border-box;
+            background-color: rgba(255,255,255,0.95);
+
+            transform-origin: top center; 
+            opacity: 0;
+            transform: scale(0);
+            transition: opacity 0.8s ease;
+        }
+
+        /* 열매 꼭지 */
+        .fruit-card::before {
+            content: '';
+            position: absolute;
+            top: -8px; left: 50%;
+            transform: translateX(-50%);
+            width: 4px; height: 10px;
+            background-color: #5D4037;
+            border-radius: 2px;
+        }
+
+        /* 열매 잎사귀 */
+        .fruit-card::after {
+            content: '';
+            position: absolute;
+            top: -10px; left: 50%;
+            width: 14px; height: 7px;
+            background-color: #66BB6A;
+            border-radius: 10px 0px 10px 0px;
+            transform: rotate(-15deg);
+        }
+
+        .nickname { font-size: 0.7rem; margin-bottom: 2px; opacity: 0.7; font-family: 'Jua', sans-serif; }
+        .content { font-size: 0.9rem; font-weight: bold; word-break: keep-all; line-height: 1.1; }
+
+        /* 살랑거리는 애니메이션 */
+        @keyframes swing {
+            0% { transform: rotate(2deg); }
+            100% { transform: rotate(-2deg); }
+        }
+
+        .hanging {
+            animation: swing 2s ease-in-out infinite alternate;
+        }
+
+        .show { opacity: 1; transform: scale(1); }
+    </style>
+</head>
+<body>
+
+    <video id="bg-video" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=2000&auto=format&fit=crop">
+        <source src="tree.mp4" type="video/mp4">
+        브라우저가 동영상을 지원하지 않습니다.
+    </video>
+
+    <div id="message-container"></div>
+
+    <script>
+        // 초기 데이터
+        let allMessages = [
+            { id: 1, nickname: "희망", text: "올해는 꼭 대박나길!" },
+            { id: 2, nickname: "사과", text: "건강이 최고예요" },
+            { id: 3, nickname: "포도", text: "주렁주렁 행복 열려라" },
+            { id: 4, nickname: "나무", text: "단단하게 자라자" },
+            { id: 5, nickname: "햇살", text: "오늘도 빛나는 너" },
+            { id: 6, nickname: "바람", text: "걱정은 날려버려" },
+            { id: 7, nickname: "씨앗", text: "작은 시작이 중요해" },
+            { id: 8, nickname: "열매", text: "달콤한 결실 맺기를" },
+            { id: 9, nickname: "뿌리", text: "흔들리지 않는 마음" },
+            { id: 10, nickname: "초록", text: "눈이 편안해져요" }
+        ];
+
+        let priorityQueue = [];
+        let currentOnScreenIds = new Set();
+        const fruitColors = ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#F1C0E8', '#A0E7E5'];
+        const container = document.getElementById('message-container');
+        let zIndex = 1;
+
+        function isOverlapping(newRect) {
+            const cards = document.querySelectorAll('.fruit-card.show');
+            for (let card of cards) {
+                const rect = card.getBoundingClientRect();
+                if (!(newRect.right - 5 < rect.left || 
+                      newRect.left + 5 > rect.right || 
+                      newRect.bottom - 5 < rect.top || 
+                      newRect.top + 5 > rect.bottom)) {
+                    return true; 
+                }
+            }
+            return false;
+        }
+
+        function displayMessage() {
+            let messageData;
+
+            if (priorityQueue.length > 0) {
+                messageData = priorityQueue.shift();
+            } else {
+                const available = allMessages.filter(m => !currentOnScreenIds.has(m.id));
+                if (available.length === 0) return;
+                messageData = available[Math.floor(Math.random() * available.length)];
+            }
+
+            const card = document.createElement('div');
+            card.className = `fruit-card`;
+            card.style.backgroundColor = fruitColors[Math.floor(Math.random() * fruitColors.length)];
+            
+            // 좌표 계산: 화면 중앙 상단(나무 수관)에 집중
+            let top, left, attempts = 0;
+            const size = 90;
+
+            do {
+                left = Math.random() * (window.innerWidth * 0.6) + (window.innerWidth * 0.2);
+                top = Math.random() * (window.innerHeight * 0.5) + (window.innerHeight * 0.05);
+                attempts++;
+            } while (isOverlapping({left, top, right: left + size, bottom: top + size}) && attempts < 20);
+
+            card.style.top = `${top}px`;
+            card.style.left = `${left}px`;
+            card.style.zIndex = zIndex++;
+            card.style.animationDelay = `-${Math.random() * 2}s`; // 랜덤 흔들림 시작점
+
+            card.innerHTML = `
+                <div class="nickname">${messageData.nickname}</div>
+                <div class="content">${messageData.text}</div>
+            `;
+
+            container.appendChild(card);
+            currentOnScreenIds.add(messageData.id);
+
+            setTimeout(() => {
+                card.classList.add('show');
+                card.classList.add('hanging');
+            }, 100);
+
+            const duration = Math.random() * 5000 + 12000;
+            setTimeout(() => {
+                card.classList.remove('show');
+                setTimeout(() => {
+                    if (container.contains(card)) {
+                        container.removeChild(card);
+                        currentOnScreenIds.delete(messageData.id);
+                    }
+                }, 1000);
+            }, duration);
+        }
+
+        for(let i=0; i<7; i++) {
+            setTimeout(displayMessage, i * 400);
+        }
+        setInterval(displayMessage, 2500);
+
+        function addNewMessage(nickname, text) {
+            const newMsg = { id: Date.now(), nickname, text };
+            allMessages.push(newMsg);
+            priorityQueue.push(newMsg);
+        }
+    </script>
+</body>
+</html>
