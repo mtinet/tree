@@ -1,6 +1,9 @@
 # tree
 ## 단축 주소  
-## [https://url.kr/sk86pe](https://url.kr/sk86pe)  
+## Tree 웹페이지 단축주소  
+[https://url.kr/sk86pe](https://url.kr/sk86pe)  
+
+## Sender 웹페이지 QR코드  
 ![](https://github.com/mtinet/tree/blob/main/qr.png?raw=true)  
 
 ### "당신의 소망, 나무에 걸어보세요."  
